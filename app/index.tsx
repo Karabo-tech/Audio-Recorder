@@ -1,19 +1,24 @@
+import { registerRootComponent } from 'expo';
 import React from 'react';
-import { StyleSheet, StatusBar, View } from 'react-native';
-import MainScreen from './screens/MainScreen';
+import { StatusBar, SafeAreaView, StyleSheet } from 'react-native';
+import MainScreen from '../screens/MainScreen';
 
-export default function App() {
+function App() {
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      <MainScreen />
-    </View>
+    <>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <SafeAreaView style={styles.container}>
+        <MainScreen />
+      </SafeAreaView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa',
   },
 });
+
+export default registerRootComponent(App);

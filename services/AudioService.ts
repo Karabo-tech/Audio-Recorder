@@ -8,12 +8,15 @@ export const AudioService = {
     return recording;
   },
 
-  async stop(recording: Audio.Recording): Promise<{ uri: string; duration: number }> {
+  async stopRecording(recording: Audio.Recording): Promise<{ uri: string; duration: number }> {
     await recording.stopAndUnloadAsync();
+
     const uri = recording.getURI()!;
     const { sound } = await recording.createNewLoadedSoundAsync();
     const status = await sound.getStatusAsync();
+
     const duration = status.isLoaded ? (status.durationMillis || 0) / 1000 : 0;
+
     return { uri, duration };
   },
 
@@ -23,7 +26,7 @@ export const AudioService = {
     return sound;
   },
 
-  async stop(sound: Audio.Sound | null): Promise<void> {
+  async stopSound(sound: Audio.Sound | null): Promise<void> {
     if (sound) {
       await sound.stopAsync();
       await sound.unloadAsync();
