@@ -9,8 +9,8 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
-import * as FileSystem from 'expo-file-system';
-import { Audio } from 'expo-av';
+import FileSystem from 'expo-file-system'; // Correct import
+import { Audio, AVPlaybackStatus } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 
 import { VoiceNote } from '../types';
@@ -18,7 +18,8 @@ import { loadNotes, saveNotes } from '../utils/storage';
 import { AudioService } from '../services/AudioService';
 import RecordingListItem from '../components/RecordingListItem';
 
-const DIR = `${FileSystem.documentDirectory}recordings/`;
+// Correct directory path
+const RECORDINGS_DIR = `${FileSystem.documentDirectory}recordings/`;
 
 export default function MainScreen() {
   const [notes, setNotes] = useState<VoiceNote[]>([]);
@@ -29,116 +30,155 @@ export default function MainScreen() {
   const [playingId, setPlayingId] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
-      await ensureDir();
-      await loadAll();
-    })();
+    initializeApp();
   }, []);
 
-  const ensureDir = async () => {
-    const info = await FileSystem.getInfoAsync(DIR);
-    if (!info.exists) await FileSystem.makeDirectoryAsync(DIR, { intermediates: true });
+  const initializeApp = async () => {
+    await ensureDirectoryExists();
+    await loadAllNotes();
   };
 
-  const loadAll = async () => setNotes(await loadNotes());
+  const ensureDirectoryExists = async () => {
+    const dirInfo = await FileSystem.getInfoAsync(RECORDINGS_DIR);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(RECORDINGS_DIR, { intermediates: true });
+    }
+  };
+
+  const loadAllNotes = async () => {
+    const saved = await loadNotes();
+    setNotes(saved);
+  };
 
   const startRecord = async () => {
-    const { status } = await Audio.requestPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Needed', 'Microphone access is required');
-      return;
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert('Permission Required', 'Microphone access is required to record.');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const rec = await AudioService.start();
+      setRecording(rec);
+      setIsRecording(true);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to start recording');
+      console.error(error);
     }
-
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-    });
-
-    const rec = await AudioService.start();
-    setRecording(rec);
-    setIsRecording(true);
   };
 
   const stopRecord = async () => {
     if (!recording) return;
-    setIsRecording(false);
 
-    const { uri, duration } = await AudioService.stop(recording);
-    const filename = `note_${Date.now()}.m4a`;
-    const path = `${DIR}${filename}`;
-    await FileSystem.moveAsync({ from: uri, to: path });
+    try {
+      setIsRecording(false);
+      const { uri, duration } = await AudioService.stop(recording);
 
-    const newNote: VoiceNote = {
-      id: Date.now().toString(),
-      path,
-      date: new Date().toISOString(),
-      duration,
-    };
+      const filename = `recording_${Date.now()}.m4a`;
+      const newPath = `${RECORDINGS_DIR}${filename}`;
 
-    const updated = [...notes, newNote];
-    await saveNotes(updated);
-    setNotes(updated);
-    setRecording(null);
+      // This now works — moveAsync exists!
+      await FileSystem.moveAsync({
+        from: uri,
+        to: newPath,
+      });
+
+      const newNote: VoiceNote = {
+        id: Date.now().toString(),
+        path: newPath,
+        date: new Date().toISOString(),
+        duration,
+      };
+
+      const updatedNotes = [...notes, newNote];
+      await saveNotes(updatedNotes);
+      setNotes(updatedNotes);
+      setRecording(null);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save recording');
+      console.error(error);
+    }
   };
 
   const play = async (note: VoiceNote) => {
-    await AudioService.stop(currentSound);
-    const sound = await AudioService.play(note.path);
-    setCurrentSound(sound);
-    setPlayingId(note.id);
-
-    sound.setOnPlaybackStatusUpdate((s) => {
-      if (s.isLoaded && s.didJustFinish) {
-        setPlayingId(null);
-        setCurrentSound(null);
+    try {
+      if (currentSound) {
+        await AudioService.stop(currentSound);
       }
-    });
+
+      const sound = await AudioService.play(note.path);
+      setCurrentSound(sound);
+      setPlayingId(note.id);
+
+      sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setPlayingId(null);
+          setCurrentSound(null);
+        }
+      });
+    } catch (error) {
+      Alert.alert('Playback Failed', 'Could not play audio');
+    }
   };
 
   const stopPlayback = async () => {
-    await AudioService.stop(currentSound);
-    setCurrentSound(null);
-    setPlayingId(null);
+    if (currentSound) {
+      await AudioService.stop(currentSound);
+      setCurrentSound(null);
+      setPlayingId(null);
+    }
   };
 
   const deleteNote = (id: string, path: string) => {
-    Alert.alert('Delete', 'Remove this voice note?', [
+    Alert.alert('Delete Recording', 'This cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await FileSystem.deleteAsync(path, { idempotent: true });
-          const updated = notes.filter((n) => n.id !== id);
-          await saveNotes(updated);
-          setNotes(updated);
-          if (playingId === id) await stopPlayback();
+          try {
+            await FileSystem.deleteAsync(path, { idempotent: true });
+            const updated = notes.filter((n) => n.id !== id);
+            await saveNotes(updated);
+            setNotes(updated);
+
+            if (playingId === id) {
+              await stopPlayback();
+            }
+          } catch (error) {
+            Alert.alert('Error', 'Could not delete file');
+          }
         },
       },
     ]);
   };
 
-  const filtered = notes.filter((n) =>
-    new Date(n.date).toLocaleString().toLowerCase().includes(search.toLowerCase())
+  const filteredNotes = notes.filter((note) =>
+    new Date(note.date).toLocaleString().toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Audio Recorder</Text>
-        <Text style={styles.count}>{notes.length} recordings</Text>
+        <Text style={styles.subtitle}>{notes.length} recordings</Text>
       </View>
 
       <TextInput
-        style={styles.search}
-        placeholder="Search by date/time..."
+        style={styles.searchInput}
+        placeholder="Search recordings..."
         value={search}
         onChangeText={setSearch}
       />
 
       <FlatList
-        data={filtered}
-        keyExtractor={(i) => i.id}
+        data={filteredNotes}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <RecordingListItem
             note={item}
@@ -149,14 +189,14 @@ export default function MainScreen() {
           />
         )}
         ListEmptyComponent={
-          <Text style={styles.empty}>No recordings yet. Tap the mic!</Text>
+          <Text style={styles.emptyText}>No recordings yet. Tap the mic to record!</Text>
         }
       />
 
-      <View style={styles.recordBtn}>
+      <View style={styles.recordButtonContainer}>
         <TouchableOpacity
           onPress={isRecording ? stopRecord : startRecord}
-          style={[styles.fab, isRecording && styles.recording]}
+          style={[styles.recordButton, isRecording && styles.recordingActive]}
         >
           <Ionicons
             name={isRecording ? 'stop-circle' : 'mic-circle'}
@@ -166,7 +206,10 @@ export default function MainScreen() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.feedback} onPress={() => Alert.alert('Support', 'Email: support@audio-recorder.app')}>
+      <TouchableOpacity
+        style={styles.feedbackButton}
+        onPress={() => Alert.alert('Support', 'Email: support@audio-recorder.app')}
+      >
         <Text style={styles.feedbackText}>Feedback & Support</Text>
       </TouchableOpacity>
     </SafeAreaView>
@@ -175,29 +218,35 @@ export default function MainScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f9fa' },
-  header: { padding: 20, paddingBottom: 10 },
-  title: { fontSize: 34, fontWeight: 'bold' },
-  count: { fontSize: 16, color: '#666', marginTop: 4 },
-  search: {
-    marginHorizontal: 16,
+  header: { padding: 20 },
+  title: { fontSize: 32, fontWeight: 'bold', color: '#1a1a1a' },
+  subtitle: { fontSize: 16, color: '#666', marginTop: 6 },
+  searchInput: {
+    margin: 16,
     padding: 14,
     backgroundColor: '#fff',
     borderRadius: 12,
     fontSize: 16,
-    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  empty: { textAlign: 'center', marginTop: 60, fontSize: 18, color: '#888' },
-  recordBtn: { alignItems: 'center', padding: 20 },
-  fab: {
+  emptyText: { textAlign: 'center', marginTop: 80, fontSize: 18, color: '#888' },
+  recordButtonContainer: { alignItems: 'center', padding: 20 },
+  recordButton: {
     backgroundColor: '#fff',
     borderRadius: 60,
-    padding: 12,
-    elevation: 10,
+    padding: 16,
+    elevation: 12,
     shadowColor: '#000',
     shadowOpacity: 0.3,
     shadowRadius: 10,
   },
-  recording: { shadowColor: '#FF3B30', shadowOpacity: 0.6 },
-  feedback: { alignItems: 'center', padding: 16 },
+  recordingActive: {
+    shadowColor: '#FF3B30',
+    shadowOpacity: 0.6,
+  },
+  feedbackButton: { alignItems: 'center', padding: 16 },
   feedbackText: { color: '#007AFF', fontSize: 16 },
 });
