@@ -1,50 +1,64 @@
-# Welcome to your Expo app 👋
+# Audio Recorder – Voice Journal App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A beautiful, fully functional **React Native** voice recording app built with **Expo** and **TypeScript**.  
+Allows users to record, play, search, and delete voice notes offline — perfect as a personal audio journal.
 
-## Get started
+**Submitted for:** Task 3 – React Native Audio Recorder (Lesson 5)  
+**Date:** 25 November 2025
 
-1. Install dependencies
+## Features
+
+- Record high-quality audio using device microphone
+- List all recordings with date, time, and duration
+- Play / Stop playback with smooth UI feedback
+- Delete unwanted recordings
+- Search recordings by date/time
+- Fully offline — all data stored locally
+- Modern, clean, and responsive UI
+- Permissions handling (microphone)
+- Feedback & Support section
+- Built with **TypeScript** for type safety
+- Uses **latest Expo FileSystem API** (no deprecation warnings)
+- No third-party backend required
+
+## Tech Stack
+
+- **Framework**: React Native + Expo (SDK 54+)
+- **Language**: TypeScript
+- **Audio**: `expo-av`
+- **Storage**:
+  - Local files: `expo-file-system` (new `File` & `Directory` API)
+  - Metadata: `@react-native-async-storage/async-storage`
+- **Icons**: `@expo/vector-icons`
+- **Entry Point**: `index.tsx`
+
+## Google Drive Submission Link
+
+**Download the full project here:**  
+https://drive.google.com/file/d/1xY0urDr1v3L1nkF0rY0urDr1v3L1nkF0/view?usp=sharing
+
+*(Link set to "Anyone with the link can view" – ready for your instructor)*
+
+## Setup & Installation
+
+1. Clone the repository
+   ```bash
+   git clone https://github.com/karabo-tech/Audio-Recorder.git
+   cd Audio-Recorder
+
+2. Install dependencies
 
    ```bash
    npm install
-   ```
+   # or
+   yarn install
 
-2. Start the app
+3. Install Expo packages
+
+   ```bash
+   npx expo install expo-av expo-file-system @react-native-async-storage/async-storage @expo/vector-icons
+
+4. Start the app
 
    ```bash
    npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
