@@ -1,64 +1,151 @@
-# Audio Recorder – Voice Journal App
+# Audio Recording Journal App
 
-A beautiful, fully functional **React Native** voice recording app built with **Expo** and **TypeScript**.  
-Allows users to record, play, search, and delete voice notes offline — perfect as a personal audio journal.
-
-**Submitted for:** Task 3 – React Native Audio Recorder (Lesson 5)  
-**Date:** 25 November 2025
+A comprehensive digital voice notes application built with React Native and Expo. Record, organize, and playback audio notes with advanced features like customizable recording quality, playback speed control, and searchable titles.
 
 ## Features
 
-- Record high-quality audio using device microphone
-- List all recordings with date, time, and duration
-- Play / Stop playback with smooth UI feedback
-- Delete unwanted recordings
-- Search recordings by date/time
-- Fully offline — all data stored locally
-- Modern, clean, and responsive UI
-- Permissions handling (microphone)
-- Feedback & Support section
-- Built with **TypeScript** for type safety
-- Uses **latest Expo FileSystem API** (no deprecation warnings)
-- No third-party backend required
+### ✅ Core Functionality
 
-## Tech Stack
+- **Recording** - Record audio notes using device microphone with high-quality audio capture
+- **Playback** - Play back recorded voice notes with smooth audio controls
+- **Delete** - Remove unwanted voice notes with confirmation dialogs
+- **Storage Management** - Efficient local storage using AsyncStorage and file system
 
-- **Framework**: React Native + Expo (SDK 54+)
-- **Language**: TypeScript
-- **Audio**: `expo-av`
-- **Storage**:
-  - Local files: `expo-file-system` (new `File` & `Directory` API)
-  - Metadata: `@react-native-async-storage/async-storage`
-- **Icons**: `@expo/vector-icons`
-- **Entry Point**: `index.tsx`
+### ✅ Advanced Features
 
-## Google Drive Submission Link
+- **Titles & Organization** - Add custom titles to voice notes for easy identification
+- **Search Functionality** - Search recordings by title or date/time
+- **Playback Speed Control** - Adjust playback speed (0.5x, 0.75x, 1x, 1.25x, 1.5x, 2x) while playing
+- **Recording Quality Settings** - Choose between Low, Medium, and High quality recordings
+- **Recording Timer** - Visual indicator showing recording duration in real-time
+- **Settings Screen** - Customize default recording quality and playback speed
 
-**Download the full project here:**  
-https://drive.google.com/file/d/1xY0urDr1v3L1nkF0rY0urDr1v3L1nkF0/view?usp=sharing
+### ✅ User Experience
 
-*(Link set to "Anyone with the link can view" – ready for your instructor)*
+- **Permissions Handling** - Proper microphone and storage permissions management
+- **Offline Functionality** - Full offline support - record and access notes without internet
+- **User-Friendly Interface** - Clean, intuitive design with Material icons
+- **Feedback & Support** - Built-in support contact information
 
-## Setup & Installation
+## Technical Stack
 
-1. Clone the repository
-   ```bash
-   git clone https://github.com/karabo-tech/Audio-Recorder.git
-   cd Audio-Recorder
+- **React Native** - Cross-platform mobile framework
+- **Expo** - Development platform and SDK
+- **Expo AV** - Audio recording and playback
+- **Expo File System** - File management
+- **AsyncStorage** - Persistent data storage
+- **TypeScript** - Type-safe development
 
-2. Install dependencies
+## Project Structure
 
-   ```bash
-   npm install
-   # or
-   yarn install
+```
+├── screens/
+│   ├── MainScreen.tsx          # Main app screen with recording list
+│   └── SettingsScreen.tsx      # Settings configuration screen
+├── components/
+│   └── RecordingListItem.tsx   # Individual recording item component
+├── services/
+│   └── AudioService.ts         # Audio recording and playback service
+├── utils/
+│   └── storage.ts              # AsyncStorage utilities
+├── types/
+│   └── index.ts                # TypeScript type definitions
+└── App.tsx                     # App entry point
+```
 
-3. Install Expo packages
+## Installation
 
-   ```bash
-   npx expo install expo-av expo-file-system @react-native-async-storage/async-storage @expo/vector-icons
+```bash
+npm install
+```
 
-4. Start the app
+## Running the App
 
-   ```bash
-   npx expo start
+```bash
+# Start Expo development server
+npm start
+
+# Run on Android
+npm run android
+
+# Run on iOS
+npm run ios
+
+# Run on Web
+npm run web
+```
+
+## Usage Guide
+
+### Recording a Voice Note
+
+1. Tap the green microphone button at the bottom
+2. Grant microphone permissions if prompted
+3. Watch the recording timer indicator
+4. Tap the red stop button to finish recording
+5. Add an optional title when prompted
+
+### Playing Back Recordings
+
+1. Tap the play button on any recording
+2. Use the speed button (appears during playback) to adjust playback speed
+3. Tap stop to end playback
+
+### Editing Recording Titles
+
+1. Tap the edit icon (pencil) on any recording
+2. Enter or modify the title
+3. Tap "Save" to update
+
+### Searching Recordings
+
+1. Use the search bar at the top
+2. Search by title or date/time
+3. Results filter automatically
+
+### Configuring Settings
+
+1. Tap the settings icon in the top-right
+2. Choose recording quality (affects file size and audio quality)
+3. Set default playback speed
+4. Changes save automatically
+
+### Deleting Recordings
+
+1. Tap the trash icon on any recording
+2. Confirm deletion in the dialog
+3. Recording and file are permanently removed
+
+## Requirements Met
+
+✅ Recording Functionality - Full microphone recording support  
+✅ List of Voice Notes - Display with date, time, duration, and titles  
+✅ Playback Functionality - Play recordings with speed control  
+✅ Delete Functionality - Remove recordings with confirmation  
+✅ Create New Voice Note - Simple tap-to-record interface  
+✅ Storage Management - Efficient file and metadata storage  
+✅ User Interface - Clean, modern, user-friendly design  
+✅ Permissions Handling - Microphone and storage permissions  
+✅ Search Functionality - Search by title or date/time  
+✅ Settings - Customize recording quality and playback speed  
+✅ Offline Functionality - Works completely offline  
+✅ Feedback and Support - Built-in support contact
+
+## Optional Features
+
+❌ Backup and Restore - Not implemented (can be added with cloud storage integration)
+
+## Notes
+
+- All recordings are stored locally on the device
+- Permissions must be granted for recording functionality
+- iOS users: Ensure "Allow Microphone Access" is enabled in Settings
+- Android users: Microphone permission will be requested on first recording
+
+## Support
+
+For feedback or support, tap the "Feedback & Support" button in the app or email: support@audio-recorder.app
+
+## License
+
+Private - Educational Project
