@@ -37,6 +37,9 @@ export default function MainScreen() {
     defaultPlaybackSpeed: 1.0,
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [showTitleEdit, setShowTitleEdit] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [titleInput, setTitleInput] = useState('');
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -106,11 +109,19 @@ export default function MainScreen() {
     }
 
     const { uri, duration } = await AudioService.stopRecording(recording);
+    console.log('⏱️ Recording stopped. Duration:', duration, 'seconds');
 
     const filename = `note_${Date.now()}.m4a`;
-    const path = `${DIR}${filename}`;
+    let path: string;
+    
     if (Platform.OS !== 'web') {
+      // On native platforms, move the file to our recordings directory
+      path = `${DIR}${filename}`;
       await FileSystem.moveAsync({ from: uri, to: path });
+    } else {
+      // On web, use the blob URI directly since we can't move files
+      path = uri;
+      console.log('📱 Web platform - using blob URI:', path);
     }
 
     const newNote: VoiceNote = {
@@ -120,6 +131,8 @@ export default function MainScreen() {
       duration,
       title: '',
     };
+    
+    console.log('📝 New note created:', JSON.stringify(newNote, null, 2));
 
     const updated = [...notes, newNote];
     await saveNotes(updated);
@@ -132,24 +145,104 @@ export default function MainScreen() {
   };
 
   const play = async (note: VoiceNote) => {
-    await AudioService.stopSound(currentSound);
-
-    const sound = await AudioService.play(note.path, playbackSpeed);
-    setCurrentSound(sound);
-    setPlayingId(note.id);
-
-    sound.setOnPlaybackStatusUpdate((s) => {
-      if (s.isLoaded && s.didJustFinish) {
-        setPlayingId(null);
+    console.log('🎵 PLAY FUNCTION CALLED for note:', note.id);
+    
+    try {
+      // Stop any current playback
+      if (currentSound) {
+        console.log('Stopping previous sound...');
+        try {
+          await currentSound.stopAsync();
+          await currentSound.unloadAsync();
+        } catch (e) {
+          console.log('Error stopping previous sound (ok to ignore):', e);
+        }
         setCurrentSound(null);
       }
-    });
+
+      // Set audio mode
+      console.log('Setting audio mode...');
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+      } catch (audioModeError) {
+        console.log('Audio mode error (continuing anyway):', audioModeError);
+      }
+
+      // Verify file exists before trying to play
+      if (Platform.OS !== 'web') {
+        const fileInfo = await FileSystem.getInfoAsync(note.path);
+        console.log('File info:', fileInfo);
+        
+        if (!fileInfo.exists) {
+          console.error('❌ File does not exist at path:', note.path);
+          Alert.alert('Playback Error', 'Recording file not found. It may have been deleted.');
+          return;
+        }
+      }
+
+      console.log('Creating sound from:', note.path);
+      console.log('Playback speed:', playbackSpeed);
+      
+      // First set the state to show we're playing
+      setPlayingId(note.id);
+      console.log('✅ Set playingId to:', note.id);
+      
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: note.path },
+        { 
+          shouldPlay: true, 
+          rate: playbackSpeed, 
+          shouldCorrectPitch: true,
+          volume: 1.0,
+        }
+      );
+      
+      console.log('✅ Sound created!');
+      
+      setCurrentSound(sound);
+      
+      // Listen for playback status changes
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded) {
+          if (status.didJustFinish) {
+            console.log('✅ Playback finished naturally');
+            setPlayingId(null);
+            setCurrentSound(null);
+          }
+        }
+      });
+      
+      console.log('✅ Play function completed successfully');
+      
+    } catch (error) {
+      console.error('❌ PLAY ERROR:', error);
+      Alert.alert('Playback Error', `Could not play: ${error instanceof Error ? error.message : error}`);
+      setPlayingId(null);
+      setCurrentSound(null);
+    }
   };
 
   const stopPlayback = async () => {
-    await AudioService.stopSound(currentSound);
-    setCurrentSound(null);
-    setPlayingId(null);
+    try {
+      console.log('Stopping playback');
+      if (currentSound) {
+        await currentSound.stopAsync();
+        await currentSound.unloadAsync();
+      }
+      setCurrentSound(null);
+      setPlayingId(null);
+      console.log('Playback stopped');
+    } catch (error) {
+      console.error('Stop playback error:', error);
+      setCurrentSound(null);
+      setPlayingId(null);
+    }
   };
 
   const cyclePlaybackSpeed = async () => {
@@ -167,47 +260,66 @@ export default function MainScreen() {
     const note = notes.find((n) => n.id === noteId);
     if (!note) return;
 
-    Alert.prompt(
-      'Add Title',
-      'Give this recording a name (optional)',
-      [
-        { text: 'Skip', style: 'cancel' },
-        {
-          text: 'Save',
-          onPress: async (title?: string) => {
-            if (title && title.trim()) {
-              const updated = notes.map((n) =>
-                n.id === noteId ? { ...n, title: title.trim() } : n
-              );
-              await saveNotes(updated);
-              setNotes(updated);
-            }
-          },
-        },
-      ],
-      'plain-text',
-      note.title || ''
-    );
+    setEditingNoteId(noteId);
+    setTitleInput(note.title || '');
+    setShowTitleEdit(true);
   };
 
-  const deleteNote = (id: string, path: string) => {
-    Alert.alert('Delete', 'Remove this voice note?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          if (Platform.OS !== 'web') {
-            await FileSystem.deleteAsync(path, { idempotent: true });
-          }
-          const updated = notes.filter((n) => n.id !== id);
-          await saveNotes(updated);
-          setNotes(updated);
+  const saveTitleEdit = async () => {
+    if (!editingNoteId) return;
 
-          if (playingId === id) await stopPlayback();
-        },
-      },
-    ]);
+    try {
+      const updated = notes.map((n) =>
+        n.id === editingNoteId ? { ...n, title: titleInput.trim() } : n
+      );
+      await saveNotes(updated);
+      setNotes(updated);
+      setShowTitleEdit(false);
+      setEditingNoteId(null);
+      setTitleInput('');
+    } catch (error) {
+      console.error('Save title error:', error);
+      Alert.alert('Error', 'Could not save title. Please try again.');
+    }
+  };
+
+  const cancelTitleEdit = () => {
+    setShowTitleEdit(false);
+    setEditingNoteId(null);
+    setTitleInput('');
+  };
+
+  const deleteNote = async (id: string, path: string) => {
+    console.log('🗑️ deleteNote called with id:', id, 'path:', path);
+    
+    try {
+      // Stop playback if this recording is playing
+      if (playingId === id) {
+        console.log('Stopping playback before delete');
+        await stopPlayback();
+      }
+      
+      // Delete the audio file
+      if (Platform.OS !== 'web') {
+        try {
+          console.log('Deleting file:', path);
+          await FileSystem.deleteAsync(path, { idempotent: true });
+          console.log('File deleted successfully');
+        } catch (fileError) {
+          console.log('File delete error (may be already deleted):', fileError);
+        }
+      }
+      
+      // Update notes list
+      const updated = notes.filter((n) => n.id !== id);
+      console.log('Saving updated notes, new count:', updated.length);
+      await saveNotes(updated);
+      setNotes(updated);
+      console.log('✅ Delete completed successfully');
+    } catch (error) {
+      console.error('❌ Delete error:', error);
+      Alert.alert('Delete Error', `Could not delete recording: ${error}`);
+    }
   };
 
   const filtered = notes.filter((n) => {
@@ -250,11 +362,26 @@ export default function MainScreen() {
             note={item}
             isPlaying={playingId === item.id}
             playbackSpeed={playbackSpeed}
-            onPlay={() => play(item)}
-            onStop={stopPlayback}
-            onDelete={() => deleteNote(item.id, item.path)}
-            onSpeedChange={cyclePlaybackSpeed}
-            onTitleEdit={() => promptForTitle(item.id)}
+            onPlay={() => {
+              console.log('▶️ Play pressed');
+              play(item);
+            }}
+            onStop={() => {
+              console.log('⏹️ Stop pressed');
+              stopPlayback();
+            }}
+            onDelete={() => {
+              console.log('🗑️ onDelete triggered in MainScreen for:', item.id);
+              deleteNote(item.id, item.path);
+            }}
+            onSpeedChange={() => {
+              console.log('⚡ Speed change pressed');
+              cyclePlaybackSpeed();
+            }}
+            onTitleEdit={() => {
+              console.log('✏️ Edit pressed');
+              promptForTitle(item.id);
+            }}
           />
         )}
         ListEmptyComponent={
@@ -300,6 +427,41 @@ export default function MainScreen() {
           onUpdateSettings={handleUpdateSettings}
           onClose={() => setShowSettings(false)}
         />
+      </Modal>
+
+      <Modal
+        visible={showTitleEdit}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelTitleEdit}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Title</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Enter recording title..."
+              value={titleInput}
+              onChangeText={setTitleInput}
+              autoFocus
+              maxLength={50}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={cancelTitleEdit}
+              >
+                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSave]}
+                onPress={saveTitleEdit}
+              >
+                <Text style={styles.modalButtonTextSave}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -365,4 +527,63 @@ const styles = StyleSheet.create({
   recording: { shadowColor: '#FF3B30', shadowOpacity: 0.6 },
   feedback: { alignItems: 'center', padding: 16 },
   feedbackText: { color: '#007AFF', fontSize: 16 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 16,
+    color: '#000',
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: '#f0f0f0',
+  },
+  modalButtonSave: {
+    backgroundColor: '#007AFF',
+  },
+  modalButtonTextCancel: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonTextSave: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

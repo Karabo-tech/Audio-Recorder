@@ -25,6 +25,8 @@ export default function RecordingListItem({
   onTitleEdit,
 }: Props) {
   const date = new Date(note.date).toLocaleString();
+  
+  console.log('📊 Rendering note:', note.id, 'Duration:', note.duration);
 
   return (
     <View style={styles.card}>
@@ -40,7 +42,9 @@ export default function RecordingListItem({
           ) : (
             <Text style={styles.date}>{date}</Text>
           )}
-          {note.duration && <Text style={styles.duration}>{note.duration.toFixed(1)}s</Text>}
+          <Text style={[styles.duration, { fontSize: 16, fontWeight: '600', color: note.duration ? '#34C759' : '#FF3B30' }]}>
+            {note.duration ? `⏱️ ${note.duration.toFixed(1)}s` : '⏱️ Duration unknown'}
+          </Text>
         </View>
 
         <View style={styles.actions}>
@@ -48,11 +52,34 @@ export default function RecordingListItem({
             <Ionicons name="create-outline" size={24} color="#666" />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={isPlaying ? onStop : onPlay} style={styles.actionBtn}>
+          <TouchableOpacity 
+            onPress={() => {
+              console.log('▶️ PLAY/STOP BUTTON PRESSED!');
+              console.log('Current state - isPlaying:', isPlaying);
+              console.log('Note path:', note.path);
+              if (isPlaying) {
+                console.log('Stopping playback...');
+                onStop();
+              } else {
+                console.log('Starting playback...');
+                onPlay();
+              }
+            }} 
+            style={[
+              styles.actionBtn, 
+              { 
+                backgroundColor: isPlaying ? 'rgba(255, 59, 48, 0.2)' : 'rgba(52, 199, 89, 0.2)',
+                borderWidth: 2,
+                borderColor: isPlaying ? '#FF3B30' : '#34C759',
+                borderRadius: 25,
+              }
+            ]}
+            activeOpacity={0.7}
+          >
             <Ionicons
               name={isPlaying ? 'stop-circle' : 'play-circle'}
               size={40}
-              color="#007AFF"
+              color={isPlaying ? '#FF3B30' : '#34C759'}
             />
           </TouchableOpacity>
 
@@ -62,7 +89,15 @@ export default function RecordingListItem({
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity onPress={onDelete} style={styles.actionBtn}>
+          <TouchableOpacity 
+            onPress={() => {
+              console.log('🗑️ DELETE BUTTON PRESSED FOR NOTE:', note.id);
+              console.log('Calling onDelete callback...');
+              onDelete();
+            }} 
+            style={[styles.actionBtn, { backgroundColor: 'rgba(255, 0, 0, 0.1)' }]}
+            activeOpacity={0.5}
+          >
             <Ionicons name="trash-bin" size={28} color="#FF3B30" />
           </TouchableOpacity>
         </View>

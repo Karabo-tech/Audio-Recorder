@@ -46,24 +46,59 @@ export const AudioService = {
   },
 
   async stopRecording(recording: Audio.Recording): Promise<{ uri: string; duration: number }> {
+    console.log('🎙️ AudioService.stopRecording called');
+    
     await recording.stopAndUnloadAsync();
+    console.log('Recording stopped and unloaded');
 
-    const uri = recording.getURI()!;
-    const { sound } = await recording.createNewLoadedSoundAsync();
-    const status = await sound.getStatusAsync();
+    const uri = recording.getURI();
+    console.log('Recording URI:', uri);
+    
+    if (!uri) {
+      console.error('❌ No URI returned from recording');
+      return { uri: '', duration: 0 };
+    }
+    
+    try {
+      const { sound } = await recording.createNewLoadedSoundAsync();
+      console.log('Sound created from recording');
+      
+      const status = await sound.getStatusAsync();
+      console.log('Sound status:', JSON.stringify(status, null, 2));
 
-    const duration = status.isLoaded ? (status.durationMillis || 0) / 1000 : 0;
+      const duration = status.isLoaded ? (status.durationMillis || 0) / 1000 : 0;
+      console.log('Calculated duration:', duration, 'seconds');
 
-    await sound.unloadAsync();
+      await sound.unloadAsync();
+      console.log('Sound unloaded');
 
-    return { uri, duration };
+      console.log('Returning: uri =', uri, 'duration =', duration);
+      return { uri, duration };
+    } catch (error) {
+      console.error('❌ Error getting duration from recording:', error);
+      // Return URI anyway, duration will be 0
+      return { uri, duration: 0 };
+    }
   },
 
   async play(uri: string, playbackSpeed: number = 1.0): Promise<Audio.Sound> {
+    console.log('🎵 AudioService.play called with URI:', uri);
+    
+    // Set audio mode before playing
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: false,
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+    });
+    
     const { sound } = await Audio.Sound.createAsync(
       { uri },
-      { shouldPlay: true, rate: playbackSpeed, shouldCorrectPitch: true }
+      { shouldPlay: true, rate: playbackSpeed, shouldCorrectPitch: true, volume: 1.0 }
     );
+    
+    console.log('✅ Sound created successfully');
     return sound;
   },
 
