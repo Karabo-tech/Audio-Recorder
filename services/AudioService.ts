@@ -48,6 +48,17 @@ export const AudioService = {
   async stopRecording(recording: Audio.Recording): Promise<{ uri: string; duration: number }> {
     console.log('🎙️ AudioService.stopRecording called');
     
+    // Get the status BEFORE stopping to capture the duration
+    const statusBeforeStop = await recording.getStatusAsync();
+    console.log('Recording status before stop:', JSON.stringify(statusBeforeStop, null, 2));
+    
+    // Calculate duration from the recording status
+    let duration = 0;
+    if (statusBeforeStop.isRecording && statusBeforeStop.durationMillis) {
+      duration = statusBeforeStop.durationMillis / 1000;
+      console.log('✅ Duration from recording status:', duration, 'seconds');
+    }
+    
     await recording.stopAndUnloadAsync();
     console.log('Recording stopped and unloaded');
 
@@ -59,26 +70,29 @@ export const AudioService = {
       return { uri: '', duration: 0 };
     }
     
-    try {
-      const { sound } = await recording.createNewLoadedSoundAsync();
-      console.log('Sound created from recording');
-      
-      const status = await sound.getStatusAsync();
-      console.log('Sound status:', JSON.stringify(status, null, 2));
+    // If we couldn't get duration from recording status, try loading the file
+    if (duration === 0) {
+      console.log('⚠️ Duration was 0, attempting to load audio file to get duration...');
+      try {
+        const { sound } = await Audio.Sound.createAsync({ uri });
+        console.log('Sound loaded from URI');
+        
+        const status = await sound.getStatusAsync();
+        console.log('Sound status:', JSON.stringify(status, null, 2));
 
-      const duration = status.isLoaded ? (status.durationMillis || 0) / 1000 : 0;
-      console.log('Calculated duration:', duration, 'seconds');
+        duration = status.isLoaded ? (status.durationMillis || 0) / 1000 : 0;
+        console.log('Calculated duration from file:', duration, 'seconds');
 
-      await sound.unloadAsync();
-      console.log('Sound unloaded');
-
-      console.log('Returning: uri =', uri, 'duration =', duration);
-      return { uri, duration };
-    } catch (error) {
-      console.error('❌ Error getting duration from recording:', error);
-      // Return URI anyway, duration will be 0
-      return { uri, duration: 0 };
+        await sound.unloadAsync();
+        console.log('Sound unloaded');
+      } catch (error) {
+        console.error('❌ Error getting duration from audio file:', error);
+        // Return URI anyway, duration will be 0
+      }
     }
+
+    console.log('Returning: uri =', uri, 'duration =', duration);
+    return { uri, duration };
   },
 
   async play(uri: string, playbackSpeed: number = 1.0): Promise<Audio.Sound> {
