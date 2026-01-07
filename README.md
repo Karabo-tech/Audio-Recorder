@@ -2,6 +2,18 @@
 
 A comprehensive digital voice notes application built with React Native and Expo. Record, organize, and playback audio notes with advanced features like customizable recording quality, playback speed control, and searchable titles.
 
+## 📦 Download APK (Android)
+
+#### You can download and install the latest Android APK directly from Google Drive:
+
+# 👉 Download Audio Recording Journal App (APK)
+
+- Installation Notes
+- Enable “Install unknown apps” on your Android device if prompted
+- This APK is for educational/demo purposes
+- The app works fully offline once installed
+- Microphone permission is required for recording
+
 ## Features
 
 ### ✅ Core Functionality
@@ -63,7 +75,7 @@ npm install
 
 ```bash
 # Start Expo development server
-npm start
+npm start or npx expo start
 
 # Run on Android
 npm run android
