@@ -145,7 +145,7 @@ npm run web
 
 ## Optional Features
 
-❌ Backup and Restore - Not implemented (can be added with cloud storage integration)
+❌ Backup and Restore - Not implemented
 
 ## Notes
 
@@ -154,10 +154,3 @@ npm run web
 - iOS users: Ensure "Allow Microphone Access" is enabled in Settings
 - Android users: Microphone permission will be requested on first recording
 
-## Support
-
-For feedback or support, tap the "Feedback & Support" button in the app or email: support@audio-recorder.app
-
-## License
-
-Private - Educational Project
