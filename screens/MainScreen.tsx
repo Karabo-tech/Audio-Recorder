@@ -1,24 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TextInput,
-  Alert,
-  TouchableOpacity,
-  Platform,
-  Modal,
-} from 'react-native';
-import * as FileSystem from 'expo-file-system/legacy';
-import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system/legacy';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  FlatList,
+  Modal,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-import { VoiceNote, AppSettings } from '../types';
-import { loadNotes, saveNotes, loadSettings, saveSettings } from '../utils/storage';
-import { AudioService } from '../services/AudioService';
 import RecordingListItem from '../components/RecordingListItem';
+import { AudioService } from '../services/AudioService';
+import { AppSettings, VoiceNote } from '../types';
+import { loadNotes, loadSettings, saveNotes, saveSettings } from '../utils/storage';
 import SettingsScreen from './SettingsScreen';
 
 const DIR = Platform.OS !== 'web' ? `${(FileSystem as any).documentDirectory}recordings/` : 'recordings/';
